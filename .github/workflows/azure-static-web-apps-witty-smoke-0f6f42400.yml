@@ -1,58 +1,241 @@
-name: Azure Static Web Apps CI/CD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Choose your Plan</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f7f9fc;
+      margin: 0;
+      padding: 0;
+      color: #1d1d1d;
+    }
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
+    .container {
+      padding: 40px 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
 
-jobs:
-  build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
-    runs-on: ubuntu-latest
-    name: Build and Deploy Job
-    permissions:
-       id-token: write
-       contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-          lfs: false
-      - name: Install OIDC Client from Core Package
-        run: npm install @actions/core@1.6.0 @actions/http-client
-      - name: Get Id Token
-        uses: actions/github-script@v6
-        id: idtoken
-        with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_SMOKE_0F6F42400 }}
-          action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "/" # Built app content directory - optional
-          github_id_token: ${{ steps.idtoken.outputs.result }}
-          ###### End of Repository/Build Configurations ######
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
 
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          action: "close"
+    .plan-toggle {
+      background-color: #e2e8f0;
+      border-radius: 9999px;
+      display: flex;
+      padding: 5px;
+    }
+
+    .toggle-btn {
+      border: none;
+      background: none;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 9999px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-btn.active {
+      background-color: white;
+      color: #2563eb;
+      box-shadow: 0 0 0 2px #2563eb;
+    }
+
+    .cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      padding: 20px;
+      width: 220px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+      border: 2px solid transparent;
+      transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card.popular {
+      border-color: #22c55e;
+    }
+
+    .badge {
+      background-color: #22c55e;
+      color: white;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .price {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .per {
+      font-size: 16px;
+      color: gray;
+    }
+
+    .save {
+      font-size: 14px;
+      color: #16a34a;
+      margin-bottom: 10px;
+    }
+
+    .features {
+      font-size: 14px;
+      color: #4b5563;
+      margin-bottom: 10px;
+    }
+
+    .users {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .select-btn {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Choose your Plan</h2>
+      <div class="plan-toggle">
+        <button id="annualBtn" class="toggle-btn active">Annual – 10% off</button>
+        <button id="monthlyBtn" class="toggle-btn">Monthly</button>
+      </div>
+    </div>
+
+    <div class="cards" id="plansContainer"></div>
+  </div>
+
+  <script>
+    const plans = [
+      {
+        name: 'Single',
+        monthly: 99,
+        annual: 1080,
+        save: 108,
+        addOffice: 99,
+        addField: 25,
+        officeUsers: 1,
+        fieldUsers: 1
+      },
+      {
+        name: 'Duo',
+        monthly: 179,
+        annual: 1933,
+        save: 215,
+        addOffice: 85,
+        addField: 21,
+        officeUsers: 2,
+        fieldUsers: 3
+      },
+      {
+        name: 'Team',
+        monthly: 349,
+        annual: 3769,
+        save: 419,
+        addOffice: 80,
+        addField: 18,
+        officeUsers: 4,
+        fieldUsers: 6,
+        popular: true
+      },
+      {
+        name: 'Company',
+        monthly: 649,
+        annual: 6577,
+        save: 1211,
+        addOffice: 75,
+        addField: 15,
+        officeUsers: 8,
+        fieldUsers: 12
+      },
+      {
+        name: 'Enterprise',
+        monthly: 1199,
+        annual: 12949,
+        save: 1439,
+        addOffice: 70,
+        addField: 12,
+        officeUsers: 16,
+        fieldUsers: 24
+      }
+    ];
+
+    const plansContainer = document.getElementById('plansContainer');
+    const annualBtn = document.getElementById('annualBtn');
+    const monthlyBtn = document.getElementById('monthlyBtn');
+
+    function renderPlans(isAnnual) {
+      plansContainer.innerHTML = '';
+      plans.forEach(plan => {
+        const price = isAnnual ? `$${plan.annual.toLocaleString()}` : `$${plan.monthly}`;
+        const per = isAnnual ? '/yr' : '/mo';
+        const save = isAnnual ? `<div class="save">Save $${plan.save}</div>` : '';
+        const addOffice = `*$${plan.addOffice}/mo per additional office user`;
+        const addField = `*$${plan.addField}/mo per additional field user`;
+        const popular = plan.popular ? 'popular' : '';
+        const badge = plan.popular ? `<div class="badge">🌟 Most popular</div>` : '';
+
+        plansContainer.innerHTML += `
+          <div class="card ${popular}">
+            ${badge}
+            <h3>${plan.name}</h3>
+            <div class="price">${price}<span class="per">${per}</span></div>
+            ${save}
+            <div class="features">${addOffice}<br>${addField}</div>
+            <div class="users">💻 ${plan.officeUsers} office users<br>📍 ${plan.fieldUsers} field users</div>
+            <button class="select-btn">Select</button>
+          </div>
+        `;
+      });
+    }
+
+    annualBtn.addEventListener('click', () => {
+      annualBtn.classList.add('active');
+      monthlyBtn.classList.remove('active');
+      renderPlans(true);
+    });
+
+    monthlyBtn.addEventListener('click', () => {
+      monthlyBtn.classList.add('active');
+      annualBtn.classList.remove('active');
+      renderPlans(false);
+    });
+
+    // Initial render
+    renderPlans(true);
+  </script>
+</body>
+</html>
